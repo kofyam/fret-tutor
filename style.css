@@ -363,6 +363,10 @@ body.playing .neck-tools .seg { pointer-events: auto; }
   border-radius: 8px; padding: 10px 12px; font-size: 15px; text-overflow: ellipsis;
 }
 .mic-select:hover { border-color: var(--cyan); }
+.mic-row { display: flex; align-items: center; gap: 10px; flex: none; }
+.mic-row label { color: var(--muted); font-size: 14px; font-weight: 500; flex: none; }
+.mic-row .mic-select { flex: 1; min-width: 0; min-height: 40px; padding: 6px 10px; font-size: 14px; }
+body.playing .mic-row { display: none; }
 .tune-strings button.near { border-color: var(--cyan); color: var(--cyan); }
 
 /* ---------- Tablet ---------- */
@@ -396,7 +400,7 @@ body.playing .neck-tools .seg { pointer-events: auto; }
   .stage-select, .drill-list, .neck-tools { flex: none; }
   .drill-list { flex-direction: row; overflow-x: auto; margin-inline: calc(-1 * var(--gutter-l)) calc(-1 * var(--gutter-r)); padding-inline: var(--gutter-l) var(--gutter-r); padding-bottom: 2px; scrollbar-width: none; }
   .drill { flex: none; width: auto; max-width: 240px; grid-template-columns: 24px auto auto; white-space: nowrap; }
-  .neck-wrap { flex: none; height: max(260px, calc(100vh - 420px)); height: max(260px, calc(100dvh - 420px)); }
+  .neck-wrap { flex: none; height: max(260px, calc(100vh - 470px)); height: max(260px, calc(100dvh - 470px)); }
   .actions { position: sticky; bottom: 0; z-index: 5; padding-bottom: 6px; flex: none; }
 
   /* Playing: lesson and coach step aside, and the page stops scrolling */

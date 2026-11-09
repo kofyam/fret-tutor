@@ -93,24 +93,28 @@
 
   /* Microphone picker. Browsers hide device names until the mic has been allowed once. */
   async function refreshMics() {
-    const sel = $('micSel');
-    if (!sel) return;
     let mics = [];
     try {
       mics = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput');
     } catch (e) { /* not supported here */ }
     const named = mics.some((d) => d.label);
     const current = state.micId || audio.liveId || '';
-    sel.innerHTML = '';
-    const add = (value, text) => {
-      const o = document.createElement('option');
-      o.value = value; o.textContent = text;
-      sel.appendChild(o);
-    };
-    if (!named) add('', mics.length ? 'Default microphone' : 'No microphone found');
-    else mics.forEach((d, i) => add(d.deviceId, d.label || `Microphone ${i + 1}`));
-    if (named && current && [...sel.options].some((o) => o.value === current)) sel.value = current;
-    sel.disabled = !named || mics.length < 2;
+    // The Tuner and Practice pickers show the same list and the same choice.
+    ['micSel', 'micSelPractice'].forEach((id) => {
+      const sel = $(id);
+      if (!sel) return;
+      sel.innerHTML = '';
+      const add = (value, text) => {
+        const o = document.createElement('option');
+        o.value = value; o.textContent = text;
+        sel.appendChild(o);
+      };
+      if (!named) add('', mics.length ? 'Default microphone' : 'No microphone found');
+      else mics.forEach((d, i) => add(d.deviceId, d.label || `Microphone ${i + 1}`));
+      if (named && current && [...sel.options].some((o) => o.value === current)) sel.value = current;
+      sel.disabled = !named || mics.length < 2;
+      sel.title = sel.disabled && !named ? 'Turn on the mic once to see all your microphones' : '';
+    });
     $('micHint').textContent = !mics.length ? 'Connect a microphone, then turn on the mic.'
       : !named ? 'Turn on the mic once, and the browser will list all your microphones here.'
       : mics.length < 2 ? 'This is the only microphone this browser can see.'
@@ -124,7 +128,12 @@
     if (ui.session) stopSession();
     disableMic();
     try { await enableMic(); renderTunerIdle(); }
-    catch (err) { updateMicUi(true); $('tuneStatus').textContent = micErrorMessage(err); refreshMics(); }
+    catch (err) {
+      updateMicUi(true);
+      $('tuneStatus').textContent = micErrorMessage(err);
+      if (ui.view === 'practice') showNotice(micErrorMessage(err), true);
+      refreshMics();
+    }
   }
 
   function disableMic() {
@@ -1051,7 +1060,7 @@
       if (t.dataset.view === view) t.setAttribute('aria-current', 'page');
       else t.removeAttribute('aria-current');
     });
-    if (view === 'practice') { renderLesson(); renderPracticeNeck(); }
+    if (view === 'practice') { renderLesson(); renderPracticeNeck(); refreshMics(); }
     if (view === 'path') renderPath();
     if (view === 'neck') { renderDisplaySeg(); renderExplorer(); }
     if (view === 'tune') { renderTunerIdle(); refreshMics(); }
@@ -1105,6 +1114,7 @@
       catch (err) { updateMicUi(true); $('tuneStatus').textContent = micErrorMessage(err); }
     });
     $('micSel').addEventListener('change', (e) => switchMic(e.target.value));
+    $('micSelPractice').addEventListener('change', (e) => switchMic(e.target.value));
     if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', refreshMics);
     $('tuneStrings').addEventListener('click', (e) => {
       const b = e.target.closest('[data-midi]');
