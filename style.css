@@ -357,6 +357,12 @@ body.playing .neck-tools .seg { pointer-events: auto; }
 .tune-strings { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
 .tune-strings button { min-height: 58px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); font: 700 22px/1 var(--display); }
 .tune-strings button small { display: block; font: 500 11px var(--body); color: var(--muted); margin-top: 3px; }
+.mic-pick { display: flex; flex-direction: column; gap: 6px; }
+.mic-select {
+  width: 100%; min-height: 46px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px 12px; font-size: 15px; text-overflow: ellipsis;
+}
+.mic-select:hover { border-color: var(--cyan); }
 .tune-strings button.near { border-color: var(--cyan); color: var(--cyan); }
 
 /* ---------- Tablet ---------- */

@@ -6,7 +6,7 @@
 
   /* ---------- Saved state ---------- */
   const STORE_KEY = 'fret-tutor-v1';
-  const defaults = () => ({ root: 9, quality: 'major', display: 'fingers', progress: {}, history: [], seconds: {}, stage: null, drill: null });
+  const defaults = () => ({ root: 9, quality: 'major', display: 'fingers', progress: {}, history: [], seconds: {}, stage: null, drill: null, micId: null });
   function load() {
     try {
       const raw = localStorage.getItem(STORE_KEY);
@@ -52,10 +52,19 @@
       const e = new Error('insecure'); e.name = 'InsecureContext'; throw e;
     }
     const ctx = getCtx();
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
-      video: false,
-    });
+    const constraints = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 };
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: state.micId ? Object.assign({ deviceId: { exact: state.micId } }, constraints) : constraints, video: false,
+      });
+    } catch (err) {
+      // The saved mic was unplugged: fall back to the system default.
+      if (!state.micId || !/NotFound|Overconstrained|NotReadable/.test(err.name)) throw err;
+      state.micId = null; save();
+      stream = await navigator.mediaDevices.getUserMedia({ audio: constraints, video: false });
+    }
+    if (audio.stream) { stream.getTracks().forEach((t) => t.stop()); return; } // a second click won the race
     audio.stream = stream;
     const source = ctx.createMediaStreamSource(stream);
     const analyser = ctx.createAnalyser();
@@ -77,7 +86,45 @@
     const settings = stream.getAudioTracks()[0].getSettings ? stream.getAudioTracks()[0].getSettings() : {};
     audio.inLat = settings.latency || 0;
     stream.getAudioTracks()[0].addEventListener('ended', disableMic);
+    audio.liveId = settings.deviceId || null;
     updateMicUi();
+    refreshMics();
+  }
+
+  /* Microphone picker. Browsers hide device names until the mic has been allowed once. */
+  async function refreshMics() {
+    const sel = $('micSel');
+    if (!sel) return;
+    let mics = [];
+    try {
+      mics = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput');
+    } catch (e) { /* not supported here */ }
+    const named = mics.some((d) => d.label);
+    const current = state.micId || audio.liveId || '';
+    sel.innerHTML = '';
+    const add = (value, text) => {
+      const o = document.createElement('option');
+      o.value = value; o.textContent = text;
+      sel.appendChild(o);
+    };
+    if (!named) add('', mics.length ? 'Default microphone' : 'No microphone found');
+    else mics.forEach((d, i) => add(d.deviceId, d.label || `Microphone ${i + 1}`));
+    if (named && current && [...sel.options].some((o) => o.value === current)) sel.value = current;
+    sel.disabled = !named || mics.length < 2;
+    $('micHint').textContent = !mics.length ? 'Connect a microphone, then turn on the mic.'
+      : !named ? 'Turn on the mic once, and the browser will list all your microphones here.'
+      : mics.length < 2 ? 'This is the only microphone this browser can see.'
+      : 'Pick a mic, then pluck a string. The meter at the top should jump. Your choice is remembered.';
+  }
+
+  async function switchMic(id) {
+    state.micId = id || null;
+    save();
+    if (!audio.stream) { refreshMics(); return; }
+    if (ui.session) stopSession();
+    disableMic();
+    try { await enableMic(); renderTunerIdle(); }
+    catch (err) { updateMicUi(true); $('tuneStatus').textContent = micErrorMessage(err); refreshMics(); }
   }
 
   function disableMic() {
@@ -87,6 +134,7 @@
     if (audio.source) audio.source.disconnect();
     if (audio.sink) audio.sink.disconnect();
     audio.stream = audio.analyser = audio.source = audio.sink = null;
+    audio.liveId = null;
     $('micLevel').style.transform = 'scaleX(0)';
     updateMicUi();
     renderTunerIdle();
@@ -1006,7 +1054,7 @@
     if (view === 'practice') { renderLesson(); renderPracticeNeck(); }
     if (view === 'path') renderPath();
     if (view === 'neck') { renderDisplaySeg(); renderExplorer(); }
-    if (view === 'tune') renderTunerIdle();
+    if (view === 'tune') { renderTunerIdle(); refreshMics(); }
     document.querySelector('.main').scrollTop = 0;
   }
 
@@ -1056,6 +1104,8 @@
       try { await enableMic(); renderTunerIdle(); }
       catch (err) { updateMicUi(true); $('tuneStatus').textContent = micErrorMessage(err); }
     });
+    $('micSel').addEventListener('change', (e) => switchMic(e.target.value));
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', refreshMics);
     $('tuneStrings').addEventListener('click', (e) => {
       const b = e.target.closest('[data-midi]');
       if (!b) return;
