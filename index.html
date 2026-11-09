@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f14">
+<meta name="description" content="A guitar practice tutor that listens through your mic, scores each drill and tells you what to work on next.">
+<title>Fret Tutor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0f14'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%232fd6f0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Fret Tutor</div>
+    <button id="keyBtn" class="key-btn" type="button" aria-haspopup="dialog"></button>
+    <button id="micBtn" class="mic-btn" type="button" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 0 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.9V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.6a6 6 0 0 0 5-5.9Z"/></svg>
+      <span id="micLabel">Mic off</span>
+      <span class="meter" aria-hidden="true"><span id="micLevel"></span></span>
+    </button>
+  </header>
+
+  <nav class="tabs" aria-label="Main">
+    <button class="tab" data-view="practice" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3Zm10-2a3 3 0 1 1-3-3 3 3 0 0 1 3 3Z"/></svg>Practice</button>
+    <button class="tab" data-view="path" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10m7 10V4m7 16v-7"/></svg>Progress</button>
+    <button class="tab" data-view="neck" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v18M16 3v18M8 8h8M8 13h8M8 18h8"/></svg>Neck</button>
+    <button class="tab" data-view="tune" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16a8 8 0 0 1 16 0M12 16l4-5"/></svg>Tuner</button>
+  </nav>
+
+  <main class="main">
+    <!-- Practice -->
+    <section id="view-practice" class="view practice">
+      <aside class="lesson">
+        <label class="eyebrow" for="stageSel">Lesson</label>
+        <select id="stageSel" class="stage-select"></select>
+        <div id="drillList" class="drill-list" role="list"></div>
+        <p id="howText" class="how"></p>
+      </aside>
+
+      <div class="stage">
+        <div id="hud" class="hud" hidden>
+          <div class="hud-target">
+            <div id="hudNote" class="hud-note">A</div>
+            <div id="hudSub" class="hud-sub"></div>
+          </div>
+          <div class="hud-heard">
+            <div class="eyebrow">Heard</div>
+            <div id="hudHeard" class="hud-heard-note">&ndash;</div>
+            <div class="cents" aria-hidden="true"><span id="hudNeedle"></span></div>
+          </div>
+          <div class="hud-bar" aria-hidden="true"><span id="hudBar"></span></div>
+          <p id="hudMsg" class="hud-msg" aria-live="polite"></p>
+        </div>
+
+        <div class="neck-tools">
+          <div class="seg" role="group" aria-label="Dot labels" id="displaySeg">
+            <button type="button" data-display="clean">Clean</button>
+            <button type="button" data-display="notes">Notes</button>
+            <button type="button" data-display="fingers">1 2 3</button>
+          </div>
+          <div id="tempo" class="tempo" hidden>
+            <button id="bpmDown" type="button" aria-label="Slower">&minus;</button>
+            <span><b id="bpmVal">60</b> BPM</span>
+            <button id="bpmUp" type="button" aria-label="Faster">+</button>
+          </div>
+        </div>
+
+        <div class="neck-wrap">
+          <div id="neck" class="neck"></div>
+          <div id="countIn" class="count-in" hidden aria-live="assertive"></div>
+        </div>
+
+        <div class="actions">
+          <div id="micNotice" class="notice" role="alert" hidden></div>
+          <div class="action-row">
+            <button id="startBtn" class="btn primary" type="button">Start</button>
+            <button id="demoBtn" class="btn" type="button">Hear it</button>
+            <button id="stopBtn" class="btn" type="button" hidden>Stop</button>
+          </div>
+          <button id="tapToggle" class="linkish" type="button"></button>
+        </div>
+      </div>
+
+      <aside id="coach" class="coach"></aside>
+    </section>
+
+    <!-- Progress -->
+    <section id="view-path" class="view page" hidden></section>
+
+    <!-- Neck explorer -->
+    <section id="view-neck" class="view explorer" hidden>
+      <div class="explorer-controls">
+        <h1 id="neckTitle" class="page-title"></h1>
+        <div>
+          <div class="eyebrow">Shapes</div>
+          <div id="shapeChips" class="chips" role="group" aria-label="Shapes to show"></div>
+        </div>
+        <div>
+          <div class="eyebrow">Dot labels</div>
+          <div class="seg" role="group" aria-label="Dot labels" id="displaySeg2">
+            <button type="button" data-display="clean">Clean</button>
+            <button type="button" data-display="notes">Notes</button>
+            <button type="button" data-display="fingers">1 2 3</button>
+          </div>
+        </div>
+        <p class="how">Pick two neighboring shapes to see where they overlap. Tap any dot to hear it.</p>
+      </div>
+      <div id="neckFull" class="neck full"></div>
+    </section>
+
+    <!-- Tuner -->
+    <section id="view-tune" class="view page tuner" hidden>
+      <h1 class="page-title">Tuner</h1>
+      <p class="how">Pick one string at a time and let it ring. The scoring only works when your guitar is in tune, so start each session here.</p>
+      <div class="gauge-wrap">
+        <svg id="gauge" viewBox="0 0 300 170" role="img" aria-label="Tuning gauge"></svg>
+        <div id="tuneNote" class="tune-note">&ndash;</div>
+        <div id="tuneStatus" class="tune-status" aria-live="polite">Turn on the mic to start</div>
+      </div>
+      <div id="tuneStrings" class="tune-strings" role="group" aria-label="Play a reference note"></div>
+      <button id="tuneMic" class="btn primary" type="button">Turn on mic</button>
+    </section>
+  </main>
+</div>
+
+<!-- Report -->
+<div id="report" class="overlay" role="dialog" aria-modal="true" aria-labelledby="reportTitle" hidden>
+  <div id="reportBody" class="report-sheet"></div>
+</div>
+
+<!-- Key picker -->
+<div id="keySheet" class="overlay sheet-overlay" role="dialog" aria-modal="true" aria-labelledby="keyTitle" hidden>
+  <div class="key-sheet">
+    <h2 id="keyTitle" class="sheet-title">Choose a key</h2>
+    <div class="eyebrow">Root note</div>
+    <div id="rootGrid" class="root-grid"></div>
+    <div class="eyebrow">Scale</div>
+    <div id="qualitySeg" class="seg wide" role="group" aria-label="Scale">
+      <button type="button" data-q="major">Major pentatonic</button>
+      <button type="button" data-q="minor">Minor pentatonic</button>
+    </div>
+    <p class="how">Your progress carries across keys. The shapes stay the same and only move up or down the neck.</p>
+    <button id="keyDone" class="btn primary" type="button">Done</button>
+  </div>
+</div>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
